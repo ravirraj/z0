@@ -38,6 +38,7 @@ Z0 is a self-hosted, open-source alternative to [v0.app](https://v0.app) that tr
 | **Persistent Chat History** | Conversations and generated components saved to PostgreSQL |
 | **Projects Dashboard** | View and manage all your generated projects |
 | **Live Preview** | Split-screen resizable layout with instant component preview |
+| **QR Code Sharing** | One-click QR code for the live preview URL — scan to open on any device |
 | **Dark/Light Theme** | Full theme support with system preference detection |
 | **Image Attachments** | Attach images to your prompts for context |
 | **Voice Input** | Microphone support for voice-based prompts |

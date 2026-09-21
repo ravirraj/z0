@@ -1,4 +1,5 @@
-import { Maximize, Minimize, Monitor, RefreshCw } from "lucide-react";
+import { Maximize, Minimize, Monitor, QrCode, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import {
   WebPreview,
   WebPreviewBody,
@@ -6,6 +7,7 @@ import {
   WebPreviewNavigationButton,
   WebPreviewUrl,
 } from "@/components/ai-elements/web-preview";
+import { QrCodeDialog } from "@/components/dialogs/qr-code-dialog";
 import { cn } from "@/lib/utils";
 
 interface Chat {
@@ -29,6 +31,9 @@ export function PreviewPanel({
   refreshKey,
   setRefreshKey,
 }: PreviewPanelProps) {
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const demoUrl = currentChat?.demo || "";
+
   return (
     <div
       className={cn(
@@ -60,6 +65,13 @@ export function PreviewPanel({
             value={currentChat?.demo || ""}
           />
           <WebPreviewNavigationButton
+            onClick={() => setIsQrOpen(true)}
+            tooltip="Show QR code"
+            disabled={!currentChat?.demo}
+          >
+            <QrCode className="h-4 w-4" />
+          </WebPreviewNavigationButton>
+          <WebPreviewNavigationButton
             onClick={() => setIsFullscreen(!isFullscreen)}
             tooltip={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             disabled={!currentChat?.demo}
@@ -87,6 +99,14 @@ export function PreviewPanel({
           </div>
         )}
       </WebPreview>
+
+      {demoUrl && (
+        <QrCodeDialog
+          open={isQrOpen}
+          onOpenChange={setIsQrOpen}
+          url={demoUrl}
+        />
+      )}
     </div>
   );
 }
