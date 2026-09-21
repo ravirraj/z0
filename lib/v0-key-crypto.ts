@@ -11,10 +11,15 @@ const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 
 function getEncryptionKey(): Buffer {
-  const secret = process.env.AUTH_SECRET;
+  const secret =
+    process.env.BETTER_AUTH_SECRET?.trim() ||
+    process.env.AUTH_SECRET?.trim() ||
+    "";
 
-  if (!secret || secret.trim().length === 0) {
-    throw new Error("AUTH_SECRET is required for BYOK encryption");
+  if (!secret) {
+    throw new Error(
+      "BETTER_AUTH_SECRET (or AUTH_SECRET) is required for BYOK encryption",
+    );
   }
 
   return createHash("sha256").update(secret).digest();

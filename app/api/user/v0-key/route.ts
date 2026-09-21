@@ -6,45 +6,26 @@ import {
   hasUserV0ApiKey,
   setUserV0ApiKey,
 } from "@/lib/db/queries";
+import { createV0Client } from "@/lib/v0-client";
 
+/**
+ * Validates a v0 API key by calling the v0 API through the official SDK.
+ * Uses the lightweight `user.get()` endpoint and accepts any key format
+ * the SDK itself accepts (no prefix/regex assumptions).
+ */
 async function validateV0ApiKey(key: string): Promise<boolean> {
-  const baseUrl = process.env.V0_API_URL || "https://api.v0.dev/v1";
+  const trimmed = key.trim();
+
+  if (!trimmed) {
+    return false;
+  }
 
   try {
-    const response = await fetch(`${baseUrl}/chats?limit=1`, {
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "User-Agent": "v0-sdk/0.1.0",
-      },
-    });
-    return response.ok;
+    await createV0Client(trimmed).user.get();
+    return true;
   } catch {
     return false;
   }
-}
-
-function isByokMigrationError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("v0_api_key_encrypted") ||
-    message.includes("v0_api_key_iv") ||
-    message.includes("v0_api_key_updated_at")
-  );
-}
-
-function migrationRequiredResponse() {
-  return NextResponse.json(
-    {
-      error:
-        "Database migration required. Run `pnpm db:migrate` and restart the app.",
-      code: "migration_required",
-    },
-    { status: 503 },
-  );
 }
 
 export async function GET() {
@@ -127,4 +108,28 @@ export async function DELETE() {
     }
     throw error;
   }
+}
+
+function isByokMigrationError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("v0_api_key_encrypted") ||
+    message.includes("v0_api_key_iv") ||
+    message.includes("v0_api_key_updated_at")
+  );
+}
+
+function migrationRequiredResponse() {
+  return NextResponse.json(
+    {
+      error:
+        "Database migration required. Run `pnpm db:migrate` and restart the app.",
+      code: "migration_required",
+    },
+    { status: 503 },
+  );
 }

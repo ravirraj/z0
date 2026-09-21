@@ -4,7 +4,7 @@ import type { MessageBinaryFormat } from "@v0-sdk/react";
 import { StreamingMessage } from "@v0-sdk/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { Suspense, useEffect, useRef, useState } from "react";
 import {
   clearPromptFromStorage,
@@ -53,7 +53,7 @@ function SearchParamsHandler({ onReset }: { onReset: () => void }) {
 }
 
 export function HomeClient() {
-  const { status } = useSession();
+  const { data: session, isPending: isSessionPending } = useSession();
   const router = useRouter();
   const { openKeyModal, requireV0ApiKey } = useV0ApiKeyModal();
   const [message, setMessage] = useState("");
@@ -208,7 +208,11 @@ export function HomeClient() {
   };
 
   const ensureAuthenticatedAndKey = async () => {
-    if (status !== "authenticated") {
+    if (isSessionPending) {
+      return false;
+    }
+
+    if (!session?.user) {
       router.push("/login?callbackUrl=/");
       return false;
     }

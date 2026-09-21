@@ -1,7 +1,7 @@
 import "server-only";
 
-import type { Session } from "next-auth";
 import { createClient } from "v0-sdk";
+import type { Session } from "@/app/(auth)/auth";
 import { getUserV0ApiKey } from "@/lib/db/queries";
 import { V0_API_KEY_REQUIRED_CODE } from "@/lib/v0-key";
 
@@ -40,6 +40,19 @@ export function getV0ClientErrorResponse(error: unknown) {
   return null;
 }
 
+/**
+ * Builds a v0 SDK client for an arbitrary API key.
+ * Used both for per-user BYOK clients and for validating a newly
+ * entered key, so validation always matches what the SDK accepts
+ * (no hardcoded key-format assumptions).
+ */
+export function createV0Client(apiKey: string) {
+  return createClient({
+    apiKey,
+    ...(process.env.V0_API_URL ? { baseUrl: process.env.V0_API_URL } : {}),
+  });
+}
+
 export async function getUserV0Client(session: Session | null) {
   if (!session?.user?.id) {
     throw new V0UnauthorizedError();
@@ -51,8 +64,5 @@ export async function getUserV0Client(session: Session | null) {
     throw new V0ApiKeyRequiredError();
   }
 
-  return createClient({
-    apiKey,
-    ...(process.env.V0_API_URL ? { baseUrl: process.env.V0_API_URL } : {}),
-  });
+  return createV0Client(apiKey);
 }

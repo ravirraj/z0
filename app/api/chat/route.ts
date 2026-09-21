@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import type { Session } from "next-auth";
+import type { Session } from "@/app/(auth)/auth";
 import type { ChatDetail } from "v0-sdk";
 import { auth } from "@/app/(auth)/auth";
 import { createChatOwnership, getChatCountByUserId } from "@/lib/db/queries";

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth-client";
 import { Suspense, useEffect } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ interface AppHeaderProps {
 // Component that uses useSearchParams - needs to be wrapped in Suspense
 function SearchParamsHandler() {
   const searchParams = useSearchParams();
-  const { update } = useSession();
+  const { refetch } = useSession();
 
   // Force session refresh when redirected after auth
   useEffect(() => {
@@ -31,14 +31,14 @@ function SearchParamsHandler() {
 
     if (shouldRefresh) {
       // Force session update
-      update();
+      refetch();
 
       // Clean up URL without causing navigation
       const url = new URL(window.location.href);
       url.searchParams.delete("refresh");
       window.history.replaceState({}, "", url.pathname);
     }
-  }, [searchParams, update]);
+  }, [searchParams, refetch]);
 
   return null;
 }
@@ -72,7 +72,7 @@ export function AppHeader({ className = "" }: AppHeaderProps) {
               onClick={handleLogoClick}
               className="font-semibold text-gray-900 text-lg hover:text-gray-700 dark:text-white dark:hover:text-gray-300"
             >
-              v0.diy
+              Z0
             </Link>
             <ChatSelector />
           </div>
@@ -85,12 +85,12 @@ export function AppHeader({ className = "" }: AppHeaderProps) {
               asChild
             >
               <Link
-                href="https://github.com/SujalXplores/v0.diy"
+                href="https://github.com/ravirraj/Z0"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 <GitHubIcon size={16} />
-                sujalxplores/v0.diy
+                ravirraj/Z0
               </Link>
             </Button>
             <UserNav session={session} />

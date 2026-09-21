@@ -8,8 +8,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import type { Session } from "next-auth";
-import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,17 +20,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useV0ApiKeyModal } from "@/contexts/v0-api-key-modal-context";
+import { authClient } from "@/lib/auth-client";
 
 interface UserNavProps {
-  session: Session | null;
+  session: {
+    user?: {
+      email?: string | null;
+      name?: string | null;
+      image?: string | null;
+    } | null;
+  } | null;
 }
 
 export function UserNav({ session }: UserNavProps) {
+  const router = useRouter();
   const { openKeyModal } = useV0ApiKeyModal();
-  const initials =
-    session?.user?.email?.split("@")[0]?.slice(0, 2)?.toUpperCase() || "U";
+  const displayName =
+    session?.user?.name || session?.user?.email?.split("@")[0] || "User";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
-  const isSignedOut = !session;
+  const isSignedOut = !session?.user;
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    router.push("/");
+    router.refresh();
+  };
 
   return (
     <DropdownMenu>
@@ -48,7 +62,7 @@ export function UserNav({ session }: UserNavProps) {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="font-medium text-sm leading-none">
-              {isSignedOut ? "Not signed in" : "User"}
+              {isSignedOut ? "Not signed in" : displayName}
             </p>
             {session?.user?.email && (
               <p className="text-muted-foreground text-xs leading-none">
@@ -99,13 +113,7 @@ export function UserNav({ session }: UserNavProps) {
           </>
         )}
         {!isSignedOut && (
-          <DropdownMenuItem
-            onClick={async () => {
-              // Clear any local session data first
-              await signOut({ callbackUrl: "/", redirect: true });
-            }}
-            className="cursor-pointer"
-          >
+          <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sign out</span>
           </DropdownMenuItem>

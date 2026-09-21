@@ -120,7 +120,7 @@ export function V0ApiKeyModal({
           <DialogDescription>
             This app uses bring your own key. Get your key from{" "}
             <a
-              href="https://v0.app/chat/settings/keys"
+              href="https://v0.app/settings/keys"
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
@@ -136,7 +136,7 @@ export function V0ApiKeyModal({
             type="password"
             value={apiKey}
             onChange={(event) => setApiKey(event.target.value)}
-            placeholder="v0_..."
+            placeholder="Paste your v0 API key"
             autoFocus
           />
 

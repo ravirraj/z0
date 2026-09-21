@@ -1,32 +1,9 @@
 import "server-only";
 
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte } from "drizzle-orm";
 import { decryptV0ApiKey, encryptV0ApiKey } from "@/lib/v0-key-crypto";
 import db from "./connection";
-import { chat_ownerships, type User, users } from "./schema";
-import { generateHashedPassword } from "./utils";
-
-const authUserColumns = {
-  id: users.id,
-  email: users.email,
-  password: users.password,
-  created_at: users.created_at,
-};
-
-export type AuthUser = Pick<User, "id" | "email" | "password" | "created_at">;
-
-function isMissingByokColumnsError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
-  return (
-    message.includes("v0_api_key_encrypted") ||
-    message.includes("v0_api_key_iv") ||
-    message.includes("v0_api_key_updated_at")
-  );
-}
+import { chat_ownerships, type User, user } from "./schema";
 
 /**
  * Gets the database instance, throwing if not initialized.
@@ -40,70 +17,17 @@ function getDb() {
   return db;
 }
 
-/** Retrieves a user by email address. */
-export async function getUser(email: string): Promise<AuthUser[]> {
-  try {
-    return await getDb()
-      .select(authUserColumns)
-      .from(users)
-      .where(eq(users.email, email));
-  } catch (error) {
-    console.error("Failed to get user from database");
-    throw error;
-  }
-}
-
-/** Retrieves a user by ID. */
+/** Retrieves a user by ID, including BYOK fields. */
 export async function getUserById(userId: string): Promise<User | null> {
   try {
-    const [user] = await getDb()
-      .select(authUserColumns)
-      .from(users)
-      .where(eq(users.id, userId));
+    const [found] = await getDb()
+      .select()
+      .from(user)
+      .where(eq(user.id, userId));
 
-    if (!user) {
-      return null;
-    }
-
-    try {
-      const [byokFields] = await getDb()
-        .select({
-          v0_api_key_encrypted: users.v0_api_key_encrypted,
-          v0_api_key_iv: users.v0_api_key_iv,
-          v0_api_key_updated_at: users.v0_api_key_updated_at,
-        })
-        .from(users)
-        .where(eq(users.id, userId));
-
-      return {
-        ...user,
-        ...byokFields,
-      } as User;
-    } catch (error) {
-      if (isMissingByokColumnsError(error)) {
-        return user as User;
-      }
-      throw error;
-    }
+    return found ?? null;
   } catch (error) {
     console.error("Failed to get user by ID from database");
-    throw error;
-  }
-}
-
-/** Creates a new user with email and password. */
-export async function createUser(
-  email: string,
-  password: string,
-): Promise<void> {
-  try {
-    const hashedPassword = generateHashedPassword(password);
-    await getDb().execute(sql`
-      insert into "users" ("email", "password")
-      values (${email}, ${hashedPassword})
-    `);
-  } catch (error) {
-    console.error("Failed to create user in database");
     throw error;
   }
 }
@@ -120,13 +44,13 @@ export async function setUserV0ApiKey({
     const { encrypted, iv } = encryptV0ApiKey(apiKey);
 
     await getDb()
-      .update(users)
+      .update(user)
       .set({
         v0_api_key_encrypted: encrypted,
         v0_api_key_iv: iv,
         v0_api_key_updated_at: new Date(),
       })
-      .where(eq(users.id, userId));
+      .where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to set user v0 API key in database");
     throw error;
@@ -141,13 +65,13 @@ export async function clearUserV0ApiKey({
 }): Promise<void> {
   try {
     await getDb()
-      .update(users)
+      .update(user)
       .set({
         v0_api_key_encrypted: null,
         v0_api_key_iv: null,
         v0_api_key_updated_at: null,
       })
-      .where(eq(users.id, userId));
+      .where(eq(user.id, userId));
   } catch (error) {
     console.error("Failed to clear user v0 API key in database");
     throw error;
@@ -160,8 +84,8 @@ export async function hasUserV0ApiKey({
 }: {
   userId: string;
 }): Promise<boolean> {
-  const user = await getUserById(userId);
-  return Boolean(user?.v0_api_key_encrypted && user?.v0_api_key_iv);
+  const found = await getUserById(userId);
+  return Boolean(found?.v0_api_key_encrypted && found?.v0_api_key_iv);
 }
 
 /** Decrypts and returns the stored v0 API key for a user. */
@@ -170,15 +94,15 @@ export async function getUserV0ApiKey({
 }: {
   userId: string;
 }): Promise<string | null> {
-  const user = await getUserById(userId);
+  const found = await getUserById(userId);
 
-  if (!(user?.v0_api_key_encrypted && user?.v0_api_key_iv)) {
+  if (!(found?.v0_api_key_encrypted && found?.v0_api_key_iv)) {
     return null;
   }
 
   return decryptV0ApiKey({
-    encrypted: user.v0_api_key_encrypted,
-    iv: user.v0_api_key_iv,
+    encrypted: found.v0_api_key_encrypted,
+    iv: found.v0_api_key_iv,
   });
 }
 

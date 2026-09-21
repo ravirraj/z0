@@ -1,6 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
-import { guestRegex, isDevelopmentEnvironment } from "./lib/constants";
+import { isDevelopmentEnvironment } from "./lib/constants";
+
+const SESSION_COOKIE_NAMES = [
+  "better-auth.session_token",
+  "__Secure-better-auth.session_token",
+];
+
+function hasSessionCookie(request: NextRequest): boolean {
+  return SESSION_COOKIE_NAMES.some((name) => request.cookies.has(name));
+}
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,20 +26,16 @@ export async function proxy(request: NextRequest) {
   }
 
   // Check for required environment variables
-  if (!process.env.AUTH_SECRET) {
+  if (!(process.env.BETTER_AUTH_SECRET || process.env.AUTH_SECRET)) {
     console.error(
-      "❌ Missing AUTH_SECRET environment variable. Please check your .env file.",
+      "❌ Missing BETTER_AUTH_SECRET environment variable. Please check your .env file.",
     );
     return NextResponse.next(); // Let the app handle the error with better UI
   }
 
-  const token = await getToken({
-    req: request,
-    secret: process.env.AUTH_SECRET,
-    secureCookie: !isDevelopmentEnvironment,
-  });
+  const isSignedIn = hasSessionCookie(request);
 
-  if (!token) {
+  if (!isSignedIn) {
     // Allow API routes to proceed without authentication for anonymous chat creation
     if (pathname.startsWith("/api/")) {
       return NextResponse.next();
@@ -56,9 +60,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const isGuest = guestRegex.test(token?.email ?? "");
-
-  if (token && !isGuest && ["/login", "/register"].includes(pathname)) {
+  if (["/login", "/register"].includes(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
